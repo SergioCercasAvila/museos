@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>CRUD Museos</title>
+  <link rel="stylesheet" href="/estilos.css">
+</head>
+<body>
+
+<h1>Gestión de Museos</h1>
+
+<div class="formulario">
+  <h2>Agregar / Editar Museo</h2>
+  <input type="hidden" id="museoId" />
+  <input type="text" id="nombre" placeholder="Nombre" />
+  <input type="text" id="direccion" placeholder="Dirección" />
+  <input type="text" id="horarios" placeholder="Horarios" />
+  <textarea id="descripcion" placeholder="Descripción"></textarea>
+  <input type="text" id="fotos" placeholder="URLs de fotos, separadas por comas" />
+  <button onclick="guardarMuseo()">Guardar</button>
+  <button onclick="limpiarFormulario()">Cancelar</button>
+</div>
+
+<h2>Lista de Museos</h2>
+<div id="listaMuseos"></div>
+
+<script>
+const apiBase = 'http://localhost:8080/museos';
+
+async function listarMuseos() {
+  const res = await fetch(apiBase);
+  const museos = await res.json();
+
+  const lista = document.getElementById('listaMuseos');
+  lista.innerHTML = '';
+  museos.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'museo';
+    div.innerHTML = `
+      <strong>${m.nombre}</strong><br/>
+      Dirección: ${m.direccion}<br/>
+      Horarios: ${m.horarios}<br/>
+      Descripción: ${m.descripcion}<br/>
+      Fotos: ${m.fotos ? m.fotos.join(', ') : ''}<br/>
+      <button class="editar" onclick="editarMuseo('${m.id}')">Editar</button>
+      <button class="eliminar" onclick="eliminarMuseo('${m.id}')">Eliminar</button>
+    `;
+    lista.appendChild(div);
+  });
+}
+
+async function guardarMuseo() {
+  const id = document.getElementById('museoId').value;
+  const nombre = document.getElementById('nombre').value;
+  const direccion = document.getElementById('direccion').value;
+  const horarios = document.getElementById('horarios').value;
+  const descripcion = document.getElementById('descripcion').value;
+  const fotosRaw = document.getElementById('fotos').value;
+  const fotos = fotosRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+  const museo = { id, nombre, direccion, horarios, descripcion, fotos };
+
+  if (id) {
+    await fetch(`${apiBase}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(museo)
+    });
+  } else {
+    await fetch(apiBase, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(museo)
+    });
+  }
+
+  limpiarFormulario();
+  listarMuseos();
+}
+
+function limpiarFormulario() {
+  document.getElementById('museoId').value = '';
+  document.getElementById('nombre').value = '';
+  document.getElementById('direccion').value = '';
+  document.getElementById('horarios').value = '';
+  document.getElementById('descripcion').value = '';
+  document.getElementById('fotos').value = '';
+}
+
+async function editarMuseo(id) {
+  const res = await fetch(`${apiBase}/${id}`);
+  const museo = await res.json();
+
+  document.getElementById('museoId').value = museo.id;
+  document.getElementById('nombre').value = museo.nombre;
+  document.getElementById('direccion').value = museo.direccion;
+  document.getElementById('horarios').value = museo.horarios;
+  document.getElementById('descripcion').value = museo.descripcion;
+  document.getElementById('fotos').value = museo.fotos ? museo.fotos.join(', ') : '';
+}
+
+async function eliminarMuseo(id) {
+  if (confirm('¿Quieres eliminar este museo?')) {
+    await fetch(`${apiBase}/${id}`, { method: 'DELETE' });
+    listarMuseos();
+  }
+}
+
+window.onload = listarMuseos;
+</script>
+
+</body>
+</html>
