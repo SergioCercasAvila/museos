@@ -13,8 +13,7 @@ public class FirebaseService {
     private final DatabaseReference ref;
 
     public FirebaseService() {
-        this.ref = FirebaseDatabase.getInstance()
-            .getReference("museos");
+        this.ref = FirebaseDatabase.getInstance().getReference("museos");
     }
 
     // Guardar o actualizar museo
@@ -26,6 +25,37 @@ public class FirebaseService {
         }
         ref.child(museo.getId()).setValueAsync(museo);
         return museo.getId();
+    }
+
+    // Actualizar museo existente
+    public boolean actualizarMuseo(String id, Museo museoActualizado) {
+        final boolean[] exito = {false};
+        CountDownLatch latch = new CountDownLatch(1);
+
+        ref.child(id).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    museoActualizado.setId(id); // asegura que el ID se mantenga
+                    ref.child(id).setValueAsync(museoActualizado);
+                    exito[0] = true;
+                }
+                latch.countDown();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                latch.countDown();
+            }
+        });
+
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        return exito[0];
     }
 
     // Obtener todos los museos
